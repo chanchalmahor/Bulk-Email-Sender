@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Email Sender — Chanchal Mahor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f5f4f1;
+    --surface:  #ffffff;
+    --border:   #e0ddd6;
+    --muted:    #888780;
+    --text:     #1a1a18;
+    --accent:   #1a1a18;
+    --green-bg: #eaf3de;
+    --green-tx: #3b6d11;
+    --red-bg:   #fcebeb;
+    --red-tx:   #a32d2d;
+    --amber-bg: #faeeda;
+    --amber-tx: #854f0b;
+    --blue-tx:  #185fa5;
+    --radius:   10px;
+    --radius-sm:6px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+
+  .shell { max-width: 720px; margin: 0 auto; }
+
+  header { margin-bottom: 2rem; }
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  header p  { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 2px; background: var(--border); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 1.5rem; }
+  .tab  { flex: 1; padding: 8px 12px; font-size: 13px; background: none; border: none; cursor: pointer; border-radius: 5px; color: var(--muted); transition: all .15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  /* cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+  /* form */
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 8px 10px; font-size: 14px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text); outline: none;
+    transition: border .15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: #aaa; background: #fff; }
+  .field textarea { resize: vertical; min-height: 180px; line-height: 1.6; }
+  code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* drop zones */
+  .drop-zone {
+    border: 1.5px dashed var(--border); border-radius: var(--radius-sm);
+    padding: 1.8rem 1rem; text-align: center; cursor: pointer;
+    position: relative; transition: background .15s, border-color .15s;
+  }
+  .drop-zone:hover, .drop-zone.over { background: var(--bg); border-color: #bbb; }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 24px; margin-bottom: 6px; }
+  .drop-label { font-size: 14px; color: var(--text); }
+  .drop-hint  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
+    padding: 4px 10px; font-size: 13px; margin-top: 10px;
+  }
+  .pill button { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; }
+  .pill button:hover { color: var(--text); }
+
+  /* table */
+  .tbl-wrap { overflow-x: auto; max-height: 200px; overflow-y: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; background: var(--bg); position: sticky; top: 0; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+
+  /* badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-wait   { background: var(--bg); color: var(--muted); }
+  .badge-sent   { background: var(--green-bg); color: var(--green-tx); }
+  .badge-failed { background: var(--red-bg); color: var(--red-tx); }
+  .badge-skipped{ background: var(--amber-bg); color: var(--amber-tx); }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; }
+  .stat-num { font-size: 26px; font-weight: 600; color: var(--text); }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+
+  /* progress */
+  .prog-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 1rem; }
+  .prog-fill  { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+
+  /* log */
+  .log-box { background: #18181a; border-radius: var(--radius-sm); padding: 12px 14px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 160px; overflow-y: auto; }
+  .log-line      { padding: 1px 0; color: #a0a0a0; }
+  .log-line.ok   { color: #6dbf67; }
+  .log-line.err  { color: #f07070; }
+  .log-line.info { color: #7aacdb; }
+
+  /* toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+  .toggle-row input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+  /* buttons */
+  .btn {
+    display: inline-block; padding: 10px 20px; font-size: 14px; font-weight: 500;
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    cursor: pointer; transition: all .15s; text-align: center;
+    background: var(--bg); color: var(--text);
+  }
+  .btn:hover { background: #eee; }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { opacity: .88; background: var(--accent); }
+  .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-full { width: 100%; display: block; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  #downloadArea { text-align: center; margin-top: 14px; font-size: 13px; color: var(--muted); }
+  #downloadArea a { color: var(--blue-tx); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>Bulk Email Sender</h1>
+    <p>Chanchal Mahor — Job Application Campaign</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('setup')">1 · Setup</button>
+    <button class="tab" onclick="switchTab('compose')">2 · Compose</button>
+    <button class="tab" onclick="switchTab('contacts')">3 · Contacts</button>
+    <button class="tab" onclick="switchTab('send')">4 · Send</button>
+  </div>
+
+  <!-- ── SETUP ────────────────────────────────────────────── -->
+  <div id="tab-setup" class="panel active">
+    <p class="section-label">Sender credentials</p>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Your name</label><input id="senderName" value="Chanchal Mahor"></div>
+        <div class="field"><label>Gmail address</label><input id="senderEmail" type="email" value="chanchal01232@gmail.com"></div>
+      </div>
+      <div class="field">
+        <label>Gmail App Password</label>
+        <input id="smtpPass" type="password" placeholder="xxxx xxxx xxxx xxxx">
+        <p class="hint">Get one at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a> — 2FA must be enabled.</p>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Delay between emails (seconds)</label><input id="delay" type="number" value="3" min="1" max="60"></div>
+        <div class="field"><label>Max emails per run (blank = all)</label><input id="maxEmails" type="number" placeholder="All"></div>
+      </div>
+    </div>
+
+    <p class="section-label">Resume PDF</p>
+    <div class="card">
+      <div class="drop-zone" id="resumeDrop">
+        <input type="file" accept=".pdf" id="resumeFile" onchange="handleResume(this)">
+        <div class="drop-icon">📎</div>
+        <p class="drop-label">Drop your resume PDF here</p>
+        <p class="drop-hint">or click to browse</p>
+      </div>
+      <div id="resumePill" style="display:none">
+        <span class="pill">📄 <span id="resumeName"></span><button onclick="clearResume()">×</button></span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <div></div>
+      <button class="btn btn-primary" onclick="switchTab('compose')">Next: Compose →</button>
+    </div>
+  </div>
+
+  <!-- ── COMPOSE ──────────────────────────────────────────── -->
+  <div id="tab-compose" class="panel">
+    <p class="section-label">Email content</p>
+    <div class="card">
+      <div class="field"><label>Subject line</label><input id="subject" value="Application for Data Analyst Role | Chanchal Mahor"></div>
+      <div class="field">
+        <label>Body — use <code>{name}</code> and <code>{company}</code> as merge fields</label>
+        <textarea id="body">Dear {name},
+
+I hope this email finds you well. I am writing to apply for the Data Analyst position at {company}.
+
+I am a final-year B.Tech Computer Science Engineering student (graduating in 2026) with hands-on experience in data analysis, visualization, and reporting.
+
+I have worked as a Data Analyst and Research Intern, where I used SQL, Python, Excel, and Power BI to clean, analyze, and visualize data, build dashboards, and extract actionable insights to support decision-making. I have also developed multiple real-world projects involving large datasets, KPI tracking, and interactive dashboards.
+
+I am highly motivated, detail-oriented, and passionate about transforming raw data into meaningful insights. I am eager to contribute my analytical skills while continuing to learn and grow in a professional environment.
+
+Please find my resume attached for your review. I would welcome the opportunity to discuss how my skills align with your team's requirements at {company}.
+
+Thank you for your time and consideration.
+
+Warm regards,
+Chanchal Mahor
+Data Analyst | Final-Year B.Tech CSE Student
+📧 chanchal01232@gmail.com
+📞 +91-7302194314
+🔗 https://www.linkedin.com/in/chanchalmahor/
+💻 https://github.com/chanchalmahor/</textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="switchTab('setup')">← Back</button>
+      <button class="btn btn-primary" onclick="switchTab('contacts')">Next: Contacts →</button>
+    </div>
+  </div>
+
+  <!-- ── CONTACTS ─────────────────────────────────────────── -->
+  <div id="tab-contacts" class="panel">
+    <p class="section-label">Upload contacts CSV</p>
+    <div class="card">
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+        Required columns: <code>name</code>, <code>email</code>, <code>company</code>
+      </p>
+      <div class="drop-zone" id="csvDrop">
+        <input type="file" accept=".csv" id="csvFile" onchange="handleCSV(this)">
+        <div class="drop-icon">📋</div>
+        <p class="drop-label">Drop contacts.csv here</p>
+        <p class="drop-hint">or click to browse</p>
+      </div>
+      <div id="csvPill" style="display:none">
+        <span class="pill">📊 <span id="csvFileName"></span><button onclick="clearCSV()">×</button></span>
+      </div>
+      <div id="csvPreview" style="display:none">
+        <p style="font-size:12px; color:var(--muted); margin-top:14px;" id="csvCount"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th style="width:25%">Name</th><th style="width:40%">Email</th><th style="width:22%">Company</th><th style="width:13%">Status</th></tr></thead>
+            <tbody id="contactBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="switchTab('compose')">← Back</button>
+      <button class="btn btn-primary" onclick="switchTab('send')">Next: Send →</button>
+    </div>
+  </div>
+
+  <!-- ── SEND ─────────────────────────────────────────────── -->
+  <div id="tab-send" class="panel">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="statTotal">0</div><div class="stat-lbl">Total</div></div>
+      <div class="stat"><div class="stat-num" id="statSent" style="color:var(--green-tx)">0</div><div class="stat-lbl">Sent</div></div>
+      <div class="stat"><div class="stat-num" id="statFailed" style="color:var(--red-tx)">0</div><div class="stat-lbl">Failed</div></div>
+      <div class="stat"><div class="stat-num" id="statSkipped" style="color:var(--amber-tx)">0</div><div class="stat-lbl">Skipped</div></div>
+    </div>
+
+    <div class="prog-wrap"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+
+    <div class="toggle-row">
+      <input type="checkbox" id="dryRun">
+      <label for="dryRun"><strong>Dry run</strong> — simulate without sending real emails</label>
+    </div>
+
+    <p class="section-label">Live log</p>
+    <div class="log-box" id="logBox">
+      <div class="log-line info">Ready. Complete all steps then hit Send.</div>
+    </div>
+
+    <div style="margin-top:1rem">
+      <button class="btn btn-primary btn-full" id="sendBtn" onclick="startSend()">Send emails</button>
+    </div>
+    <div style="margin-top:8px">
+      <button class="btn btn-full" onclick="switchTab('contacts')">← Back</button>
+    </div>
+    <div id="downloadArea"></div>
+  </div>
+</div>
+
+<script>
+let contacts = [];
+let resumeB64 = null;
+let resumeName = "";
+let sending = false;
+
+// ── tabs ───────────────────────────────────────────────────
+function switchTab(t) {
+  const names = ['setup','compose','contacts','send'];
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', names[i]===t));
+  document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if (t==='send') document.getElementById('statTotal').textContent = contacts.length;
+}
+
+// ── resume upload ──────────────────────────────────────────
+function handleResume(input) {
+  const file = input.files[0]; if (!file) return;
+  resumeName = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { resumeB64 = e.target.result.split(',')[1]; };
+  reader.readAsDataURL(file);
+  document.getElementById('resumeName').textContent = file.name;
+  document.getElementById('resumePill').style.display = 'block';
+}
+function clearResume() {
+  resumeB64 = null; resumeName = "";
+  document.getElementById('resumeFile').value = '';
+  document.getElementById('resumePill').style.display = 'none';
+}
+
+// ── CSV upload ─────────────────────────────────────────────
+function handleCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('csvFileName').textContent = file.name;
+  document.getElementById('csvPill').style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file);
+}
+function clearCSV() {
+  contacts = [];
+  document.getElementById('csvFile').value = '';
+  document.getElementById('csvPill').style.display = 'none';
+  document.getElementById('csvPreview').style.display = 'none';
+}
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase().trim());
+  contacts = lines.slice(1)
+    .map(l => { const v = parseLine(l); const o = {}; headers.forEach((h,i) => o[h]=(v[i]||'').trim()); return o; })
+    .filter(c => c.email && c.email.includes('@'));
+  renderContacts();
+  document.getElementById('statTotal').textContent = contacts.length;
+}
+function parseLine(line) {
+  const result = []; let cur = '', inQ = false;
+  for (const ch of line) {
+    if (ch==='"') { inQ=!inQ; } else if (ch===',' && !inQ) { result.push(cur); cur=''; } else cur+=ch;
+  }
+  result.push(cur);
+  return result.map(s => s.replace(/^"|"$/g,''));
+}
+function renderContacts() {
+  const tbody = document.getElementById('contactBody');
+  tbody.innerHTML = contacts.map(c =>
+    `<tr>
+      <td title="${c.name||''}">${c.name||''}</td>
+      <td title="${c.email||''}" style="color:var(--muted)">${c.email||''}</td>
+      <td title="${c.company||''}">${c.company||''}</td>
+      <td><span class="badge badge-wait" id="st-${CSS.escape(c.email)}">wait</span></td>
+    </tr>`).join('');
+  document.getElementById('csvCount').textContent = contacts.length + ' contacts loaded';
+  document.getElementById('csvPreview').style.display = 'block';
+}
+
+// ── logging ────────────────────────────────────────────────
+function log(msg, type='info') {
+  const box = document.getElementById('logBox');
+  const d = document.createElement('div');
+  d.className = 'log-line '+type;
+  d.textContent = '['+new Date().toLocaleTimeString()+'] '+msg;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+function setBadge(email, state) {
+  const el = document.getElementById('st-'+CSS.escape(email));
+  if (el) { el.className = 'badge badge-'+state; el.textContent = state; }
+}
+
+// ── send ───────────────────────────────────────────────────
+async function startSend() {
+  if (sending) return;
+  if (!contacts.length) { log('No contacts loaded — go to Contacts tab.','err'); return; }
+  const dry = document.getElementById('dryRun').checked;
+  const pass = document.getElementById('smtpPass').value.trim();
+  if (!dry && !pass) { log('Enter your Gmail App Password in Setup.','err'); return; }
+
+  sending = true;
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  document.getElementById('downloadArea').innerHTML = '';
+
+  const payload = {
+    senderName:   document.getElementById('senderName').value.trim(),
+    senderEmail:  document.getElementById('senderEmail').value.trim(),
+    smtpPassword: pass,
+    subject:      document.getElementById('subject').value,
+    body:         document.getElementById('body').value,
+    contacts,
+    resumeBase64: resumeB64 || '',
+    resumeName:   resumeName || 'resume.pdf',
+    delay:        parseInt(document.getElementById('delay').value)||3,
+    maxEmails:    parseInt(document.getElementById('maxEmails').value)||null,
+    dryRun:       dry
+  };
+
+  log((dry?'[DRY RUN] ':'')+'Starting — '+contacts.length+' contacts…','info');
+
+  // stream progress via polling: fire request then poll table
+  let sent=0, failed=0, skipped=0;
+  // for UX, show fake progress while waiting
+  let fakeP = 5;
+  const fakeInt = setInterval(() => {
+    if (fakeP < 90) { fakeP += 2; document.getElementById('progFill').style.width = fakeP+'%'; }
+  }, 400);
+
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    clearInterval(fakeInt);
+    document.getElementById('progFill').style.width = '100%';
+
+    if (!res.ok) {
+      const err = await res.json();
+      log('Error: '+(err.error||res.statusText),'err');
+    } else {
+      const data = await res.json();
+      const s = data.summary;
+      sent=s.sent; failed=s.failed; skipped=s.skipped;
+
+      document.getElementById('statSent').textContent = sent;
+      document.getElementById('statFailed').textContent = failed;
+      document.getElementById('statSkipped').textContent = skipped;
+
+      data.results.forEach(r => {
+        setBadge(r.email, r.status);
+        if (r.status==='sent')    log((dry?'[DRY] ':'')+'Sent → '+r.name+' <'+r.email+'>','ok');
+        else if (r.status==='failed')  log('Failed: '+r.email+' — '+(r.error||''),'err');
+        else log('Skipped: '+r.email+' — '+(r.error||'bad email'),'info');
+      });
+
+      log('Done. Sent:'+sent+' | Failed:'+failed+' | Skipped:'+skipped, sent>0?'ok':'info');
+      offerCSV(data.results);
+    }
+  } catch(e) {
+    clearInterval(fakeInt);
+    log('Request failed: '+e.message+'. Is the Flask server running?','err');
+  }
+
+  btn.disabled = false; btn.textContent = 'Send emails';
+  sending = false;
+}
+
+function offerCSV(results) {
+  const rows = ['name,email,company,status,error',
+    ...results.map(r => `"${r.name}","${r.email}","${r.company||''}","${r.status}","${r.error||''}"`)
+  ].join('\n');
+  const blob = new Blob([rows], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  document.getElementById('downloadArea').innerHTML =
+    '<a href="'+url+'" download="email_log.csv">⬇ Download email_log.csv</a>';
+}
+</script>
+</body>
+</html>
